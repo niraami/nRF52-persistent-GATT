@@ -1,0 +1,32 @@
+{
+    "configurations": [
+        {
+            "name": "nRF52840 DK",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/lib/gcc/arm-none-eabi/12.2.0/include",
+                "/opt/nRF5_SDK_15.3.0_59ac345/modules/**",
+                "/opt/nRF5_SDK_15.3.0_59ac345/components/**",
+                "/opt/nRF5_SDK_15.3.0_59ac345/integration/**",
+                "/opt/nRF5_SDK_15.3.0_59ac345/external/**"
+            ],
+            "defines": [
+                "BOARD_PCA10056",
+                "CONFIG_GPIO_AS_PINRESET",
+                "INITIALIZE_USER_SECTIONS",
+                "FLOAT_ABI_HARD",
+                "NRF52",
+                "NRF52840_XXAA",
+                "NRF_SD_BLE_API_VERSION=6",
+                "S140",
+                "SOFTDEVICE_PRESENT",
+                "SWI_DISABLE0"
+            ],
+            "compilerPath": "/usr/bin/arm-none-eabi-gcc",
+            "cStandard": "c11",
+            "cppStandard": "c++17",
+            "intelliSenseMode": "clang-x64"
+        }
+    ],
+    "version": 4
+}

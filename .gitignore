@@ -1,0 +1,5 @@
+# VSCode workspace files
+*.code-workspace
+
+pca10056/s140/armgcc/_build/**
+
