@@ -5,7 +5,7 @@ OUTPUT_DIRECTORY := _build
 # MODIFIED 21.01.2023 - Marek Ištok
 # SDK_ROOT := ../../../../../..
 SDK_ROOT := /opt/nRF5_SDK_15.3.0_59ac345
-PROJ_DIR := ../../..
+PROJ_DIR := ./
 
 $(OUTPUT_DIRECTORY)/nrf52840_xxaa.out: \
   LINKER_SCRIPT  := ble_app_template_gcc_nrf52.ld
@@ -152,7 +152,7 @@ INC_FOLDERS += \
   $(SDK_ROOT)/components/libraries/crc16 \
   $(SDK_ROOT)/components/nfc/t4t_parser/apdu \
   $(SDK_ROOT)/components/libraries/util \
-  ../config \
+  $(PROJ_DIR)/config \
   $(SDK_ROOT)/components/libraries/usbd/class/cdc \
   $(SDK_ROOT)/components/libraries/csense \
   $(SDK_ROOT)/components/libraries/balloc \
@@ -318,7 +318,7 @@ flash_softdevice:
 erase:
 	nrfjprog -f nrf52 --eraseall
 
-SDK_CONFIG_FILE := ../config/sdk_config.h
+SDK_CONFIG_FILE := $(PROJ_DIR)/config/sdk_config.h
 CMSIS_CONFIG_TOOL := $(SDK_ROOT)/external_tools/cmsisconfig/CMSIS_Configuration_Wizard.jar
 sdk_config:
 	java -jar $(CMSIS_CONFIG_TOOL) $(SDK_CONFIG_FILE)

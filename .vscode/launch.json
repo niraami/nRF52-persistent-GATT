@@ -7,7 +7,7 @@
       {
           "name": "Cortex Debug",
           "cwd": "${workspaceRoot}",
-          "executable": "${workspaceFolder}/pca10056/s140/armgcc/_build/nrf52832_xxaa.out",
+          "executable": "${workspaceFolder}/_build/nrf52840_xxaa.out",
           "request": "launch",
           "type": "cortex-debug",
           "servertype": "jlink",
