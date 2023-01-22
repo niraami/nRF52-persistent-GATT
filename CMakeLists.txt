@@ -28,6 +28,8 @@ set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 set(CMAKE_C_COMPILER "${TOOLCHAIN_BIN_PATH}/${TOOLCHAIN_TRIPLET}-gcc")
 set(CMAKE_CXX_COMPILER "${TOOLCHAIN_BIN_PATH}/${TOOLCHAIN_TRIPLET}-g++")
 set(CMAKE_ASM_COMPILER "${TOOLCHAIN_BIN_PATH}/${TOOLCHAIN_TRIPLET}-gcc")
+set(CMAKE_SIZE_BIN "${TOOLCHAIN_BIN_PATH}/${TOOLCHAIN_TRIPLET}-size")
+set(CMAKE_OBJCOPY_BIN "${TOOLCHAIN_BIN_PATH}/${TOOLCHAIN_TRIPLET}-objcopy")
 
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR arm)
@@ -267,6 +269,8 @@ target_compile_options(nrf52840_xxaa
 
 target_compile_definitions(nrf52840_xxaa
   PRIVATE
+    -D__HEAP_SIZE=8192
+    -D__STACK_SIZE=8192
     -DBOARD_PCA10056
     -DCONFIG_GPIO_AS_PINRESET
     -DFLOAT_ABI_HARD
@@ -294,4 +298,23 @@ target_link_options(nrf52840_xxaa
 target_link_libraries(nrf52840_xxaa
   PRIVATE
     -lc -lnosys -lm
+)
+
+# Print size information after build
+add_custom_command(TARGET nrf52840_xxaa POST_BUILD
+  COMMAND ${CMAKE_SIZE_BIN} "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/nrf52840_xxaa"
+)
+
+# Targets for creating Intel HEX and binary executable forms
+add_custom_target(hex DEPENDS nrf52840_xxaa
+  COMMAND
+    ${CMAKE_OBJCOPY_BIN} -O ihex
+      "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/nrf52840_xxaa"
+      "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/nrf52840_xxaa.hex"
+)
+add_custom_target(bin DEPENDS nrf52840_xxaa
+  COMMAND
+    ${CMAKE_OBJCOPY_BIN} -O binary
+      "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/nrf52840_xxaa"
+      "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/nrf52840_xxaa.bin"
 )
