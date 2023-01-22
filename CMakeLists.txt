@@ -179,6 +179,7 @@ target_include_directories(nrf52840_xxaa
 
 target_sources(nrf52840_xxaa
   PRIVATE
+    "ble_cus.c"
     "${NRF5_SDK_PATH}/modules/nrfx/mdk/gcc_startup_nrf52840.S"
     "${NRF5_SDK_PATH}/modules/nrfx/mdk/system_nrf52840.c"
     "${NRF5_SDK_PATH}/components/libraries/log/src/nrf_log_backend_rtt.c"
@@ -280,6 +281,9 @@ target_compile_definitions(nrf52840_xxaa
     -DSOFTDEVICE_PRESENT
     -DSWI_DISABLE0
 )
+
+# make sdk_config.h import app_config.h
+target_compile_definitions(nrf52840_xxaa PRIVATE USE_APP_CONFIG)
 
 target_link_options(nrf52840_xxaa
   PRIVATE
