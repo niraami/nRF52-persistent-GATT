@@ -5,10 +5,10 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/usr/lib/gcc/arm-none-eabi/12.2.0/include",
-                "/opt/nRF5_SDK_15.3.0_59ac345/modules/**",
-                "/opt/nRF5_SDK_15.3.0_59ac345/components/**",
-                "/opt/nRF5_SDK_15.3.0_59ac345/integration/**",
-                "/opt/nRF5_SDK_15.3.0_59ac345/external/**"
+                "/opt/nrf5-sdk/modules/**",
+                "/opt/nrf5-sdk/components/**",
+                "/opt/nrf5-sdk/integration/**",
+                "/opt/nrf5-sdk/external/**"
             ],
             "defines": [
                 "BOARD_PCA10056",
