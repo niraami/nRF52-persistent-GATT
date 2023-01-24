@@ -369,14 +369,14 @@ static void update_cus_flash(void)
         ble_gatts_value_t attr = {
             .len = sizeof(m_ble_cus_storage.custom_value),
             .offset = 0,
-            .p_value = &m_ble_cus_storage.custom_value
+            .p_value = (uint8_t*)&m_ble_cus_storage.custom_value
         };
 
         m_ble_cus_storage.custom_value = sd_ble_gatts_value_get(
             m_cus.conn_handle, m_cus.custom_value_handles.value_handle, &attr);
 
         /* Write the updated record to flash. */
-        err_code = fds_record_update(&desc, &m_ble_cus_storage);
+        err_code = fds_record_update(&desc, &m_ble_cus_record);
         APP_ERROR_CHECK(err_code);
     }
 }
