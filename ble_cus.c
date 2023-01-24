@@ -43,9 +43,9 @@ static uint32_t custom_value_char_add(ble_cus_t *p_cus, const ble_cus_init_t *p_
 
   attr_char_value.p_uuid = &ble_uuid;
   attr_char_value.p_attr_md = &attr_md;
-  attr_char_value.init_len = sizeof(uint8_t);
+  attr_char_value.init_len = sizeof(uint32_t);
   attr_char_value.init_offs = 0;
-  attr_char_value.max_len = sizeof(uint8_t);
+  attr_char_value.max_len = sizeof(uint32_t);
 
   err_code = sd_ble_gatts_characteristic_add(p_cus->service_handle, &char_md,
                                              &attr_char_value,
@@ -69,6 +69,7 @@ uint32_t ble_cus_init(ble_cus_t *p_cus, const ble_cus_init_t *p_cus_init)
   ble_uuid_t ble_uuid;
 
   // Initialize service structure
+  p_cus->evt_handler = p_cus_init->evt_handler;
   p_cus->conn_handle = BLE_CONN_HANDLE_INVALID;
 
   // Add Custom Service UUID
@@ -98,6 +99,10 @@ uint32_t ble_cus_init(ble_cus_t *p_cus, const ble_cus_init_t *p_cus_init)
 static void on_connect(ble_cus_t *p_cus, ble_evt_t const *p_ble_evt)
 {
   p_cus->conn_handle = p_ble_evt->evt.gap_evt.conn_handle;
+
+  ble_cus_evt_t evt;
+  evt.evt_type = BLE_CUS_EVT_CONNECTED;
+  p_cus->evt_handler(p_cus, &evt);
 }
 
 /**@brief Function for handling the Disconnect event.
@@ -109,6 +114,10 @@ static void on_disconnect(ble_cus_t *p_cus, ble_evt_t const *p_ble_evt)
 {
   UNUSED_PARAMETER(p_ble_evt);
   p_cus->conn_handle = BLE_CONN_HANDLE_INVALID;
+
+  ble_cus_evt_t evt;
+  evt.evt_type = BLE_CUS_EVT_DISCONNECTED;
+  p_cus->evt_handler(p_cus, &evt);
 }
 
 /**@brief Function for handling the Write event.
@@ -123,7 +132,9 @@ static void on_write(ble_cus_t *p_cus, ble_evt_t const *p_ble_evt)
   // Check if the handle passed with the event matches the Custom Value Characteristic handle.
   if (p_evt_write->handle == p_cus->custom_value_handles.value_handle)
   {
-    nrf_gpio_pin_toggle(LED_4);
+    ble_cus_evt_t evt;
+    evt.evt_type = BLE_CUS_EVT_WRITE;
+    p_cus->evt_handler(p_cus, &evt);
   }
 }
 

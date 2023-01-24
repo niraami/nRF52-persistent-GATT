@@ -131,6 +131,56 @@ static ble_uuid_t m_adv_uuids[] =                                               
     {CUSTOM_SERVICE_UUID, BLE_UUID_TYPE_VENDOR_BEGIN}
 };
 
+/* Array to map FDS return values to strings. */
+static char const * fds_err_str[] =
+{
+    "FDS_SUCCESS",
+    "FDS_ERR_OPERATION_TIMEOUT",
+    "FDS_ERR_NOT_INITIALIZED",
+    "FDS_ERR_UNALIGNED_ADDR",
+    "FDS_ERR_INVALID_ARG",
+    "FDS_ERR_NULL_ARG",
+    "FDS_ERR_NO_OPEN_RECORDS",
+    "FDS_ERR_NO_SPACE_IN_FLASH",
+    "FDS_ERR_NO_SPACE_IN_QUEUES",
+    "FDS_ERR_RECORD_TOO_LARGE",
+    "FDS_ERR_NOT_FOUND",
+    "FDS_ERR_NO_PAGES",
+    "FDS_ERR_USER_LIMIT_REACHED",
+    "FDS_ERR_CRC_CHECK_FAILED",
+    "FDS_ERR_BUSY",
+    "FDS_ERR_INTERNAL",
+};
+
+/* Array to map FDS events to strings. */
+static char const * fds_evt_str[] =
+{
+    "FDS_EVT_INIT",
+    "FDS_EVT_WRITE",
+    "FDS_EVT_UPDATE",
+    "FDS_EVT_DEL_RECORD",
+    "FDS_EVT_DEL_FILE",
+    "FDS_EVT_GC",
+};
+
+/* Custom service flash record. */
+static ble_cus_record_t m_ble_cus_storage =
+{
+  .custom_value = 0x01,
+};
+
+/* The flash record structure for ble_cus record. */
+static fds_record_t const m_ble_cus_record =
+{
+    .file_id = CUSTOM_SERVICE_FILE_ID,
+    .key = CUSTOM_SERVICE_RECORD_KEY,
+    .data.p_data = &m_ble_cus_storage,
+    /* The length of a record is always expressed in 4-byte units (words). */
+    .data.length_words = (sizeof(m_ble_cus_storage) + 3) / sizeof(uint32_t),
+};
+
+/* Flag to check fds initialization. */
+static bool volatile m_fds_initialized;
 
 static void advertising_start(bool erase_bonds);
 
@@ -166,6 +216,46 @@ static void pm_evt_handler(pm_evt_t const * p_evt)
         case PM_EVT_PEERS_DELETE_SUCCEEDED:
             advertising_start(false);
             break;
+
+        default:
+            break;
+    }
+}
+
+static void fds_evt_handler(fds_evt_t const * p_evt)
+{
+    NRF_LOG_INFO("Event: %s received (%s)",
+                  fds_evt_str[p_evt->id],
+                  fds_err_str[p_evt->result]);
+
+    switch (p_evt->id)
+    {
+        case FDS_EVT_INIT:
+            if (p_evt->result == FDS_SUCCESS)
+            {
+                m_fds_initialized = true;
+            }
+            break;
+
+        case FDS_EVT_WRITE:
+        {
+            if (p_evt->result == FDS_SUCCESS)
+            {
+                NRF_LOG_INFO("Record ID:\t0x%04x",  p_evt->write.record_id);
+                NRF_LOG_INFO("File ID:\t0x%04x",    p_evt->write.file_id);
+                NRF_LOG_INFO("Record key:\t0x%04x", p_evt->write.record_key);
+            }
+        } break;
+
+        case FDS_EVT_DEL_RECORD:
+        {
+            if (p_evt->result == FDS_SUCCESS)
+            {
+                NRF_LOG_INFO("Record ID:\t0x%04x",  p_evt->del.record_id);
+                NRF_LOG_INFO("File ID:\t0x%04x",    p_evt->del.file_id);
+                NRF_LOG_INFO("Record key:\t0x%04x", p_evt->del.record_key);
+            }
+        } break;
 
         default:
             break;
@@ -250,6 +340,47 @@ static void nrf_qwr_error_handler(uint32_t nrf_error)
     APP_ERROR_HANDLER(nrf_error);
 }
 
+static void update_cus_flash(void)
+{
+    ret_code_t err_code;
+
+    /* Find custom service record in flash. */
+    fds_record_desc_t desc = {0};
+    fds_find_token_t  tok  = {0};
+
+    err_code = fds_record_find(CUSTOM_SERVICE_FILE_ID, CUSTOM_SERVICE_RECORD_KEY, &desc, &tok);
+
+    if (err_code == FDS_SUCCESS)
+    {
+        fds_flash_record_t config = {0};
+
+        /* Open the record and read its contents. */
+        err_code = fds_record_open(&desc, &config);
+        APP_ERROR_CHECK(err_code);
+
+        /* Copy the record from flash into m_ble_cus_storage. */
+        memcpy(&m_ble_cus_storage, config.p_data, sizeof(ble_cus_record_t));
+
+        /* Close the record when done reading. */
+        err_code = fds_record_close(&desc);
+        APP_ERROR_CHECK(err_code);
+
+        /* Update custom value */
+        ble_gatts_value_t attr = {
+            .len = sizeof(m_ble_cus_storage.custom_value),
+            .offset = 0,
+            .p_value = &m_ble_cus_storage.custom_value
+        };
+
+        m_ble_cus_storage.custom_value = sd_ble_gatts_value_get(
+            m_cus.conn_handle, m_cus.custom_value_handles.value_handle, &attr);
+
+        /* Write the updated record to flash. */
+        err_code = fds_record_update(&desc, &m_ble_cus_storage);
+        APP_ERROR_CHECK(err_code);
+    }
+}
+
 
 /**@brief Function for handling the YYY Service events.
  * YOUR_JOB implement a service handler function depending on the event the service you are using can generate
@@ -277,6 +408,36 @@ static void on_yys_evt(ble_yy_service_t     * p_yy_service,
 }
 */
 
+/**@brief Function for handling the Custom Service Service events.
+ *
+ * @details This function will be called for all Custom Service events which are passed to
+ *          the application.
+ *
+ * @param[in]   p_cus_service  Custom Service structure.
+ * @param[in]   p_evt          Event received from the Custom Service.
+ *
+ */
+static void on_cus_evt(ble_cus_t     * p_cus_service,
+                       ble_cus_evt_t * p_evt)
+{
+    switch(p_evt->evt_type)
+    {
+        case BLE_CUS_EVT_CONNECTED:
+            break;
+
+        case BLE_CUS_EVT_DISCONNECTED:
+            break;
+        
+        case BLE_CUS_EVT_WRITE:
+            update_cus_flash();
+            break;
+
+        default:
+            // No implementation needed.
+            break;
+    }
+}
+
 /**@brief Function for initializing services that will be used by the application.
  */
 static void services_init(void)
@@ -292,8 +453,36 @@ static void services_init(void)
 
     ble_cus_init_t cus_init;
 
-     // Initialize CUS Service init structure to zero.
+    // Initialize CUS Service init structure to zero.
     memset(&cus_init, 0, sizeof(cus_init));
+
+    /* Find custom service record in flash. */
+    fds_record_desc_t desc = {0};
+    fds_find_token_t  tok  = {0};
+
+    err_code = fds_record_find(CUSTOM_SERVICE_FILE_ID, CUSTOM_SERVICE_RECORD_KEY, &desc, &tok);
+
+    if (err_code == FDS_SUCCESS)
+    {
+        fds_flash_record_t config = {0};
+
+        /* Open the record and read its contents. */
+        err_code = fds_record_open(&desc, &config);
+        APP_ERROR_CHECK(err_code);
+
+        /* Copy the record from flash into m_ble_cus_storage. */
+        memcpy(&m_ble_cus_storage, config.p_data, sizeof(ble_cus_record_t));
+
+        /* Close the record when done reading. */
+        err_code = fds_record_close(&desc);
+        APP_ERROR_CHECK(err_code);
+
+        /* Use the stored value to initialize the values in the characteristic. */
+        cus_init.initial_custom_value = m_ble_cus_storage.custom_value;
+    }
+
+    // Set the cus event handler
+    cus_init.evt_handler = on_cus_evt;
 
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cus_init.custom_value_char_attr_md.read_perm);
     BLE_GAP_CONN_SEC_MODE_SET_OPEN(&cus_init.custom_value_char_attr_md.write_perm);
@@ -672,6 +861,15 @@ static void idle_state_handle(void)
     }
 }
 
+/**@brief   Wait for fds to initialize. */
+static void wait_for_fds_ready(void)
+{
+    while (!m_fds_initialized)
+    {
+        idle_state_handle();
+    }
+}
+
 
 /**@brief Function for starting advertising.
  */
@@ -695,6 +893,7 @@ static void advertising_start(bool erase_bonds)
  */
 int main(void)
 {
+    ret_code_t err_code;
     bool erase_bonds;
 
     // Initialize.
@@ -705,6 +904,17 @@ int main(void)
     ble_stack_init();
     gap_params_init();
     gatt_init();
+
+    // Initialize FDS
+    /* Register first to receive an event when initialization is complete. */
+    (void) fds_register(fds_evt_handler);
+
+    err_code = fds_init();
+    APP_ERROR_CHECK(err_code);
+
+    /* Wait for fds to initialize. */
+    wait_for_fds_ready();
+
     services_init();
     advertising_init();
     conn_params_init();
