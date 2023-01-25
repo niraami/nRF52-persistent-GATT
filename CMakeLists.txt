@@ -250,6 +250,7 @@ target_sources(nrf52840_xxaa
     "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh.c"
     "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_ble.c"
     "${NRF5_SDK_PATH}/components/softdevice/common/nrf_sdh_soc.c"
+    "${NRF5_SDK_PATH}/components/libraries/crc32/crc32.c"
 )
 
 set(OPT -O3 -g3)

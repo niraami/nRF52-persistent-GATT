@@ -70,6 +70,7 @@ struct ble_cus_s
 typedef struct
 {
   uint32_t custom_value;
+  uint32_t crc32;
 } ble_cus_record_t;
 
 /**@brief Function for initializing the Custom Service.

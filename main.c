@@ -77,6 +77,7 @@
 #include "nrf_ble_gatt.h"
 #include "nrf_ble_qwr.h"
 #include "nrf_pwr_mgmt.h"
+#include "crc32.h"
 
 #include "nrf_log.h"
 #include "nrf_log_ctrl.h"
@@ -166,7 +167,8 @@ static char const * fds_evt_str[] =
 /* Custom service flash record. */
 static ble_cus_record_t m_ble_cus_storage =
 {
-  .custom_value = 0x01,
+  .custom_value = 0x0,
+  .crc32 = 0x0,
 };
 
 /* The flash record structure for ble_cus record. */
@@ -374,6 +376,11 @@ static void update_cus_flash(void)
 
         m_ble_cus_storage.custom_value = sd_ble_gatts_value_get(
             m_cus.conn_handle, m_cus.custom_value_handles.value_handle, &attr);
+        m_ble_cus_storage.crc32 = crc32_compute(
+            (uint8_t*)&m_ble_cus_storage.custom_value,
+            sizeof(m_ble_cus_storage.custom_value),
+            NULL
+        );
 
         /* Write the updated record to flash. */
         err_code = fds_record_update(&desc, &m_ble_cus_record);
